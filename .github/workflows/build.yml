@@ -1,0 +1,53 @@
+name: Build PE ROM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+  steps:
+  - name: Setup Base
+    run: |
+      git clone https://github.com/akhilnarang/scripts
+      cd scripts
+      bash setup/android_build_env.sh
+
+  - name: Setup Git
+    run: |
+      git config --global user.name "Rajin Gangadharan"
+      git config --global user.email "rajin.gangadharan@gmail.com"
+
+  - name: Setup Sources
+    run: |
+      mkdir pe
+      cd pe
+      repo init -u https://github.com/PixelExperience/manifest -b thirteen-plus
+      repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+
+  - name: Setup Trees
+    run: |
+      git clone https://github.com/Moto-G9-Guamp/device_motorola_guamp.git device/motorola/guamp
+      git clone https://github.com/Moto-G9-Guamp/device_motorola_sm6225-common.git device/motorola/sm6225-common
+      git clone https://github.com/Moto-G9-Guamp/kernel_motorola_sm6225.git kernel/motorola/sm6225
+      git clone https://github.com/Moto-G9-Guamp/vendor_motorola_guamp.git vendor/motorola/guamp
+      git clone https://github.com/Moto-G9-Guamp/vendor_motorola_sm6225-common.git vendor/motorola/sm6225-common
+
+  - name: Setup Build
+    run: |
+      source build/envsetup.sh
+      lunch aosp_guamp-userdebug
+
+  - name: Build
+    run: |
+      croot
+      mka bacon -j$(nproc --all)
+
+  - name: Upload
+    uses: actions/upload-artifact@v2
+    with:
+      name: pe-rom
+      path: out/target/product/guamp/*.zip
